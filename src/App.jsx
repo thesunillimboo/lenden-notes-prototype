@@ -1,6 +1,101 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
-const currencies = [
+const BRAND = "#0F766E";
+const TEXT = "#111827";
+const MUTED = "#6B7280";
+const BORDER = "#E5E7EB";
+const SURFACE = "#F8F9FA";
+const RECEIVE = "#16A34A";
+const OWE = "#F97316";
+
+const contacts = [
+  {
+    id: 1,
+    name: "Ram",
+    status: "Owes you",
+    amount: "NPR 11,000",
+    due: "Due in 2 days",
+    dueSmall: "20 May 2026",
+    kind: "receive",
+  },
+  {
+    id: 2,
+    name: "Hari",
+    status: "You owe",
+    amount: "GBP 250",
+    due: "Overdue by 3 days",
+    dueSmall: "3 May 2026",
+    kind: "owe",
+  },
+  {
+    id: 3,
+    name: "Sita",
+    status: "Settled",
+    amount: "No pending balance",
+    due: "Last updated yesterday",
+    dueSmall: "No reminder",
+    kind: "settled",
+  },
+  {
+    id: 4,
+    name: "Kamal Store",
+    status: "Owes you",
+    amount: "NPR 12,000",
+    due: "Due in 10 days",
+    dueSmall: "28 May 2026",
+    kind: "receive",
+  },
+];
+
+const transactions = [
+  {
+    type: "You lent money",
+    amount: "+ NPR 10,000",
+    date: "4 May 2026",
+    note: "School fee",
+    kind: "receive",
+  },
+  {
+    type: "Received payment",
+    amount: "- NPR 3,000",
+    date: "20 May 2026",
+    note: "Cash payment",
+    kind: "neutral",
+  },
+  {
+    type: "Interest added",
+    amount: "+ NPR 1,000",
+    date: "20 May 2026",
+    note: "5% monthly interest",
+    kind: "receive",
+  },
+];
+
+const reminderRows = [
+  {
+    name: "Hari",
+    amount: "GBP 250",
+    label: "Overdue by 3 days",
+    date: "3 May 2026",
+    kind: "owe",
+  },
+  {
+    name: "Ram",
+    amount: "NPR 11,000",
+    label: "Due in 2 days",
+    date: "20 May 2026",
+    kind: "receive",
+  },
+  {
+    name: "Kamal Store",
+    amount: "NPR 12,000",
+    label: "Due in 10 days",
+    date: "28 May 2026",
+    kind: "receive",
+  },
+];
+
+const currencyOptions = [
   "NPR",
   "GBP",
   "USD",
@@ -15,747 +110,384 @@ const currencies = [
   "KRW",
 ];
 
-const peopleSeed = [
-  {
-    id: 1,
-    name: "Ram",
-    subtitle: "He owes you",
-    amount: 8000,
-    currency: "NPR",
-    due: "20 May",
-    status: "Due soon",
-  },
-  {
-    id: 2,
-    name: "Sita",
-    subtitle: "You lent",
-    amount: 200,
-    currency: "GBP",
-    due: "12 May",
-    status: "Upcoming",
-  },
-  {
-    id: 3,
-    name: "Hari",
-    subtitle: "He owes you",
-    amount: 3000,
-    currency: "NPR",
-    due: "5 May",
-    status: "Overdue",
-  },
-  {
-    id: 4,
-    name: "Kamal Store",
-    subtitle: "You owe",
-    amount: 12000,
-    currency: "NPR",
-    due: "1 Jun",
-    status: "Upcoming",
-  },
-  {
-    id: 5,
-    name: "Uncle Binod",
-    subtitle: "You lent",
-    amount: 100,
-    currency: "USD",
-    due: "No deadline",
-    status: "Active",
-  },
-];
+export default function App() {
+  const [screen, setScreen] = useState("home");
+  const [selectedContact, setSelectedContact] = useState(contacts[0]);
+  const [recordType, setRecordType] = useState("lent");
+  const [interestOn, setInterestOn] = useState(false);
+  const [notify, setNotify] = useState("1 day before");
 
-const ledgerRows = [
-  {
-    date: "4 May 2026",
-    label: "Diyeko",
-    note: "School fee",
-    amount: "+ NPR 10,000",
-  },
-  {
-    date: "20 May 2026",
-    label: "Received partial",
-    note: "Cash",
-    amount: "- NPR 3,000",
-  },
-];
+  const activeColor = selectedContact.kind === "owe" ? OWE : RECEIVE;
 
-function money(currency, amount) {
-  return `${currency} ${Number(amount || 0).toLocaleString()}`;
-}
-
-const iconStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 22,
-  height: 22,
-  fontSize: 18,
-};
-
-function I({ children }) {
-  return <span style={iconStyle}>{children}</span>;
-}
-
-function Button({
-  children,
-  onClick,
-  variant = "dark",
-  style = {},
-  type = "button",
-}) {
-  const base = {
-    border: variant === "dark" ? "1px solid #111" : "1px solid #ddd",
-    background: variant === "dark" ? "#111" : "#fff",
-    color: variant === "dark" ? "#fff" : "#111",
-    borderRadius: 16,
-    padding: "12px 16px",
-    fontWeight: 700,
-    cursor: "pointer",
-    width: "100%",
+  const openLedger = (person) => {
+    setSelectedContact(person);
+    setScreen("ledger");
   };
+
   return (
-    <button type={type} onClick={onClick} style={{ ...base, ...style }}>
-      {children}
-    </button>
-  );
-}
+    <div style={styles.page}>
+      <div style={styles.phone}>
+        <StatusBar />
 
-function Card({ children, style = {} }) {
-  return (
-    <div
-      style={{
-        border: "1px solid #e5e5e5",
-        background: "#fff",
-        borderRadius: 20,
-        boxShadow: "0 1px 6px rgba(0,0,0,.04)",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Phone({ children }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 390,
-        minHeight: 760,
-        background: "#fff",
-        borderRadius: 32,
-        border: "1px solid #ddd",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: "0 22px 60px rgba(0,0,0,.18)",
-        position: "relative",
-      }}
-    >
-      <div
-        style={{
-          height: 28,
-          padding: "0 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          fontSize: 11,
-          color: "#444",
-        }}
-      >
-        <span>9:41</span>
-        <span>▰ ▰ ◔</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function TopBar({ title, back, onBack, right }) {
-  return (
-    <div
-      style={{
-        height: 50,
-        padding: "0 16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderBottom: "1px solid #eee",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {back ? (
-          <button onClick={onBack} style={plainBtn}>
-            ‹
-          </button>
-        ) : (
-          <I>☰</I>
-        )}
-        <strong>{title}</strong>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {right}
-      </div>
-    </div>
-  );
-}
-
-const plainBtn = {
-  background: "none",
-  border: 0,
-  fontSize: 28,
-  cursor: "pointer",
-  lineHeight: 1,
-};
-
-function BottomNav({ screen, go }) {
-  const items = [
-    ["home", "⌂", "Home"],
-    ["people", "👤", "Byakti"],
-    ["reminders", "🔔", "Reminders"],
-    ["settings", "⚙", "Settings"],
-  ];
-  return (
-    <div
-      style={{
-        height: 66,
-        display: "flex",
-        borderTop: "1px solid #eee",
-        background: "#fff",
-      }}
-    >
-      {items.map(([key, icon, label]) => (
-        <button
-          key={key}
-          onClick={() => go(key)}
-          style={{
-            flex: 1,
-            border: 0,
-            background: "#fff",
-            cursor: "pointer",
-            color: screen === key ? "#111" : "#777",
-            fontSize: 11,
-          }}
-        >
-          <div style={{ fontSize: 20 }}>{icon}</div>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Avatar({ name }) {
-  return (
-    <div
-      style={{
-        width: 42,
-        height: 42,
-        borderRadius: "50%",
-        background: "#e5e5e5",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 800,
-      }}
-    >
-      {name?.[0]}
-    </div>
-  );
-}
-
-function StepHeader({ step, title, hint }) {
-  return (
-    <div>
-      <div style={{ fontSize: 12, color: "#999" }}>{step}</div>
-      <h1 style={{ margin: "4px 0", fontSize: 26 }}>{title}</h1>
-      <p style={{ margin: 0, color: "#666", fontSize: 14 }}>{hint}</p>
-    </div>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <label style={{ display: "block" }}>
-      <span
-        style={{
-          display: "block",
-          fontSize: 12,
-          color: "#666",
-          marginBottom: 5,
-        }}
-      >
-        {label}
-      </span>
-      <div
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: 16,
-          padding: "12px 14px",
-          background: "#fff",
-          fontSize: 14,
-        }}
-      >
-        {children}
-      </div>
-    </label>
-  );
-}
-
-const inputStyle = {
-  width: "100%",
-  border: 0,
-  outline: 0,
-  fontSize: 14,
-  background: "transparent",
-};
-
-function Splash({ go }) {
-  return (
-    <Phone>
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 32,
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            width: 95,
-            height: 95,
-            borderRadius: 28,
-            background: "#eee",
-            border: "1px solid #ccc",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 36,
-            fontWeight: 900,
-            marginBottom: 24,
-          }}
-        >
-          LN
-        </div>
-        <h1 style={{ margin: 0, fontSize: 26 }}>LenDen Notes</h1>
-        <p style={{ color: "#666" }}>Tapaiko sajilo len-den record</p>
-        <Button onClick={() => go("home")} style={{ marginTop: 32 }}>
-          Open prototype
-        </Button>
-      </div>
-    </Phone>
-  );
-}
-
-function HomeScreen({ go }) {
-  return (
-    <Phone>
-      <TopBar
-        title="LenDen Notes"
-        right={
-          <>
-            <I>⌕</I>
-            <I>🔔</I>
-          </>
-        }
-      />
-      <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
-        >
-          <Card style={{ padding: 16 }}>
-            <p style={small}>
-              You’ll Receive
-              <br />
-              <span>Diyeko</span>
-            </p>
-            <h3>NPR 45,600</h3>
-            <strong>GBP 200</strong>
-          </Card>
-          <Card style={{ padding: 16 }}>
-            <p style={small}>
-              You Owe
-              <br />
-              <span>Liyeko</span>
-            </p>
-            <h3>NPR 18,200</h3>
-          </Card>
-        </div>
-        <Card style={{ padding: 20, textAlign: "center", marginTop: 12 }}>
-          <p style={small}>Net Balance</p>
-          <h1 style={{ margin: "4px 0" }}>NPR 27,400</h1>
-          <p style={small}>Grouped by currency. No auto conversion.</p>
-        </Card>
-        <div
-          style={{
-            marginTop: 20,
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
-          <strong>Urgent</strong>
-          <button onClick={() => go("reminders")} style={linkBtn}>
-            View all
-          </button>
-        </div>
-        <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-          {peopleSeed.slice(0, 3).map((p) => (
-            <PersonRow key={p.id} p={p} onClick={() => go("ledger")} />
-          ))}
-        </div>
-      </div>
-      <FAB onClick={() => go("addPerson")} />
-      <BottomNav screen="home" go={go} />
-    </Phone>
-  );
-}
-
-const small = { margin: 0, fontSize: 12, color: "#666" };
-const linkBtn = {
-  border: 0,
-  background: "none",
-  textDecoration: "underline",
-  cursor: "pointer",
-  fontSize: 12,
-};
-
-function PersonRow({ p, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: "100%",
-        border: "1px solid #eee",
-        background: "#fafafa",
-        borderRadius: 16,
-        padding: 12,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        textAlign: "left",
-        cursor: "pointer",
-      }}
-    >
-      <Avatar name={p.name} />
-      <div style={{ flex: 1 }}>
-        <strong>{p.name}</strong>
-        <p style={small}>{p.subtitle}</p>
-      </div>
-      <div style={{ textAlign: "right" }}>
-        <strong style={{ fontSize: 13 }}>{money(p.currency, p.amount)}</strong>
-        <p style={small}>{p.due}</p>
-      </div>
-    </button>
-  );
-}
-
-function FAB({ onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        position: "absolute",
-        right: 20,
-        bottom: 86,
-        width: 56,
-        height: 56,
-        borderRadius: "50%",
-        border: 0,
-        background: "#111",
-        color: "#fff",
-        fontSize: 32,
-        cursor: "pointer",
-        boxShadow: "0 8px 22px rgba(0,0,0,.25)",
-      }}
-    >
-      +
-    </button>
-  );
-}
-
-function PeopleScreen({ go }) {
-  return (
-    <Phone>
-      <TopBar
-        title="Byakti"
-        back
-        onBack={() => go("home")}
-        right={
-          <>
-            <I>⌕</I>
-            <I>⋮</I>
-          </>
-        }
-      />
-      <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 16,
-            padding: 12,
-            color: "#999",
-            marginBottom: 14,
-          }}
-        >
-          ⌕ Search by name
-        </div>
-        <div style={{ display: "grid", gap: 8 }}>
-          {peopleSeed.map((p) => (
-            <PersonRow key={p.id} p={p} onClick={() => go("ledger")} />
-          ))}
-        </div>
-      </div>
-      <FAB onClick={() => go("addPerson")} />
-      <BottomNav screen="people" go={go} />
-    </Phone>
-  );
-}
-
-function AddPersonStep({ go, form, setForm }) {
-  const filtered = peopleSeed.filter(
-    (p) =>
-      !form.person || p.name.toLowerCase().includes(form.person.toLowerCase()),
-  );
-  return (
-    <Phone>
-      <TopBar title="Naya LenDen" back onBack={() => go("home")} />
-      <div style={{ flex: 1, padding: 16 }}>
-        <StepHeader
-          step="1 of 4"
-          title="Byakti"
-          hint="Search existing or add new"
-        />
-        <div
-          style={{
-            marginTop: 20,
-            border: "1px solid #ddd",
-            borderRadius: 16,
-            padding: 12,
-          }}
-        >
-          <input
-            style={inputStyle}
-            value={form.person}
-            onChange={(e) => setForm({ ...form, person: e.target.value })}
-            placeholder="Name search or type new"
+        {screen === "home" && (
+          <HomeScreen
+            onAdd={() => setScreen("add")}
+            onLedger={openLedger}
+            onReminders={() => setScreen("reminders")}
+            onSettings={() => setScreen("settings")}
           />
-        </div>
-        <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-          {filtered.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => {
-                setForm({ ...form, person: p.name });
-                go("addDetails");
-              }}
-              style={rowBtn}
-            >
-              <Avatar name={p.name} /> {p.name}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => go("addDetails")}
-          style={{ ...rowBtn, marginTop: 10, justifyContent: "center" }}
-        >
-          + Add New Byakti
-        </button>
+        )}
+
+        {screen === "ledger" && (
+          <LedgerScreen
+            person={selectedContact}
+            activeColor={activeColor}
+            onBack={() => setScreen("home")}
+            onAdd={() => setScreen("add")}
+            onShare={() => setScreen("share")}
+          />
+        )}
+
+        {screen === "add" && (
+          <AddRecordScreen
+            onBack={() => setScreen("home")}
+            recordType={recordType}
+            setRecordType={setRecordType}
+            interestOn={interestOn}
+            setInterestOn={setInterestOn}
+            notify={notify}
+            setNotify={setNotify}
+            onSave={() => setScreen("success")}
+          />
+        )}
+
+        {screen === "success" && (
+          <SuccessScreen
+            onDone={() => setScreen("home")}
+            onLedger={() => setScreen("ledger")}
+          />
+        )}
+
+        {screen === "reminders" && (
+          <RemindersScreen
+            onBack={() => setScreen("home")}
+            onLedger={openLedger}
+          />
+        )}
+
+        {screen === "share" && (
+          <ShareScreen
+            person={selectedContact}
+            onBack={() => setScreen("ledger")}
+          />
+        )}
+
+        {screen === "settings" && (
+          <SettingsScreen onBack={() => setScreen("home")} />
+        )}
       </div>
-      <div style={{ padding: 16 }}>
-        <Button onClick={() => go("addDetails")}>Next</Button>
-      </div>
-    </Phone>
+    </div>
   );
 }
 
-const rowBtn = {
-  width: "100%",
-  border: "1px solid #eee",
-  background: "#fff",
-  borderRadius: 16,
-  padding: 12,
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  cursor: "pointer",
-};
-
-function AddDetailsStep({ go, form, setForm }) {
+function StatusBar() {
   return (
-    <Phone>
-      <TopBar title="Naya LenDen" back onBack={() => go("addPerson")} />
-      <div style={{ flex: 1, padding: 16, display: "grid", gap: 14 }}>
-        <StepHeader
-          step="2 of 4"
-          title="Rakam"
-          hint="Record in under 15 seconds"
-        />
-        <Field label="Byakti">
+    <div style={styles.statusBar}>
+      <span>9:41</span>
+      <span>▰ ▰ ◔</span>
+    </div>
+  );
+}
+
+function Header({ title, subtitle, back, onBack, right }) {
+  return (
+    <div style={styles.header}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {back && (
+          <button style={styles.iconButton} onClick={onBack}>
+            ←
+          </button>
+        )}
+        <div>
+          <h1 style={styles.headerTitle}>{title}</h1>
+          {subtitle && <p style={styles.headerSubtitle}>{subtitle}</p>}
+        </div>
+      </div>
+      {right && <div>{right}</div>}
+    </div>
+  );
+}
+
+function HomeScreen({ onAdd, onLedger, onReminders, onSettings }) {
+  return (
+    <div style={styles.screen}>
+      <Header
+        title="LenDen Notes"
+        subtitle="So you don’t have to remember"
+        right={
+          <button style={styles.smallIconButton} onClick={onSettings}>
+            ⚙
+          </button>
+        }
+      />
+
+      <div style={styles.content}>
+        <div style={styles.searchBox}>
+          <span style={{ color: MUTED }}>⌕</span>
+          <input style={styles.searchInput} placeholder="Search people" />
+        </div>
+
+        <div style={styles.summaryRow}>
+          <div style={styles.summaryMini}>
+            <span style={styles.miniLabel}>You’ll Receive</span>
+            <strong>NPR 23,000</strong>
+          </div>
+          <div style={styles.summaryMini}>
+            <span style={styles.miniLabel}>You Owe</span>
+            <strong>GBP 250</strong>
+          </div>
+        </div>
+
+        <div style={styles.sectionTitleRow}>
+          <h2 style={styles.sectionTitle}>People</h2>
+          <button style={styles.linkButton} onClick={onReminders}>
+            Reminders
+          </button>
+        </div>
+
+        <div style={styles.list}>
+          {contacts.map((person) => (
+            <ContactRow
+              key={person.id}
+              person={person}
+              onClick={() => onLedger(person)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <button style={styles.fab} onClick={onAdd}>
+        <span style={{ fontSize: 20, lineHeight: 1 }}>+</span>
+        <span>Add Record</span>
+      </button>
+    </div>
+  );
+}
+
+function ContactRow({ person, onClick }) {
+  const color =
+    person.kind === "receive" ? RECEIVE : person.kind === "owe" ? OWE : MUTED;
+
+  return (
+    <button style={styles.contactRow} onClick={onClick}>
+      <div style={styles.avatar}>{person.name[0]}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={styles.rowTop}>
+          <strong style={styles.personName}>{person.name}</strong>
+          <strong style={{ ...styles.amountText, color }}>
+            {person.amount}
+          </strong>
+        </div>
+        <p style={{ ...styles.statusText, color }}>{person.status}</p>
+        <p style={styles.dueText}>{person.due}</p>
+      </div>
+    </button>
+  );
+}
+
+function LedgerScreen({ person, activeColor, onBack, onAdd, onShare }) {
+  const isSettled = person.kind === "settled";
+
+  return (
+    <div style={styles.screen}>
+      <Header
+        title={person.name}
+        back
+        onBack={onBack}
+        right={<button style={styles.smallIconButton}>⋯</button>}
+      />
+
+      <div style={styles.content}>
+        <div style={styles.ledgerHero}>
+          <p style={styles.miniLabel}>
+            {isSettled ? "Current status" : "Total due"}
+          </p>
+          <h2
+            style={{
+              ...styles.ledgerAmount,
+              color: isSettled ? MUTED : activeColor,
+            }}
+          >
+            {person.amount}
+          </h2>
+          <p style={styles.dueText}>
+            {isSettled ? "No active balance" : person.due}
+          </p>
+        </div>
+
+        {!isSettled && (
+          <div style={styles.softCard}>
+            <div style={styles.rowTop}>
+              <h3 style={styles.cardTitle}>Interest Summary</h3>
+              <span style={styles.pill}>Optional</span>
+            </div>
+            <InfoRow label="Principal" value="NPR 10,000" />
+            <InfoRow label="Interest" value="NPR 1,000" />
+            <InfoRow label="Rate" value="5% monthly" />
+          </div>
+        )}
+
+        <div style={styles.sectionTitleRow}>
+          <h2 style={styles.sectionTitle}>History</h2>
+        </div>
+
+        <div style={styles.list}>
+          {transactions.map((tx, index) => (
+            <TransactionRow key={index} tx={tx} />
+          ))}
+        </div>
+      </div>
+
+      <div style={styles.bottomActions}>
+        <button style={styles.secondaryButton} onClick={onShare}>
+          Share
+        </button>
+        <button style={styles.primaryButton} onClick={onAdd}>
+          Add Record
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TransactionRow({ tx }) {
+  const color =
+    tx.kind === "receive" ? RECEIVE : tx.kind === "owe" ? OWE : TEXT;
+
+  return (
+    <div style={styles.transactionRow}>
+      <div>
+        <strong>{tx.type}</strong>
+        <p style={styles.dueText}>
+          {tx.date} • {tx.note}
+        </p>
+      </div>
+      <strong style={{ color }}>{tx.amount}</strong>
+    </div>
+  );
+}
+
+function AddRecordScreen({
+  onBack,
+  recordType,
+  setRecordType,
+  interestOn,
+  setInterestOn,
+  notify,
+  setNotify,
+  onSave,
+}) {
+  return (
+    <div style={styles.screen}>
+      <Header
+        title="Add Record"
+        subtitle="Keep it quick and simple"
+        back
+        onBack={onBack}
+      />
+
+      <div style={styles.content}>
+        <Field label="Person">
           <input
-            style={inputStyle}
-            value={form.person}
-            onChange={(e) => setForm({ ...form, person: e.target.value })}
+            style={styles.input}
+            placeholder="Search or add name"
+            defaultValue="Ram"
           />
         </Field>
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 95px", gap: 8 }}
-        >
-          <Field label="Rakam">
-            <input
-              style={inputStyle}
-              type="number"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            />
+
+        <div style={styles.twoColumn}>
+          <Field label="Amount">
+            <input style={styles.input} placeholder="0" defaultValue="10000" />
           </Field>
           <Field label="Currency">
-            <select
-              style={inputStyle}
-              value={form.currency}
-              onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            >
-              {currencies.map((c) => (
+            <select style={styles.input} defaultValue="NPR">
+              {currencyOptions.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
           </Field>
         </div>
+
         <div>
-          <span style={{ fontSize: 12, color: "#666" }}>Diyeko / Liyeko</span>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 8,
-              marginTop: 8,
-            }}
-          >
-            <Button
-              variant={form.type === "Diyeko" ? "dark" : "light"}
-              onClick={() => setForm({ ...form, type: "Diyeko" })}
+          <label style={styles.label}>What happened?</label>
+          <div style={styles.segmentGroup}>
+            <button
+              style={
+                recordType === "lent" ? styles.segmentActive : styles.segment
+              }
+              onClick={() => setRecordType("lent")}
             >
-              Diyeko
-            </Button>
-            <Button
-              variant={form.type === "Liyeko" ? "dark" : "light"}
-              onClick={() => setForm({ ...form, type: "Liyeko" })}
+              You lent
+            </button>
+            <button
+              style={
+                recordType === "borrowed"
+                  ? styles.segmentActive
+                  : styles.segment
+              }
+              onClick={() => setRecordType("borrowed")}
             >
-              Liyeko
-            </Button>
+              You borrowed
+            </button>
           </div>
         </div>
-        <Field label="Karan (optional)">
-          <input
-            style={inputStyle}
-            value={form.reason}
-            onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            placeholder="School fee, emergency, shop credit..."
-          />
-        </Field>
-      </div>
-      <div style={{ padding: 16 }}>
-        <Button onClick={() => go("addMore")}>Next</Button>
-      </div>
-    </Phone>
-  );
-}
 
-function AddMoreStep({ go, form, setForm }) {
-  return (
-    <Phone>
-      <TopBar title="More Details" back onBack={() => go("addDetails")} />
-      <div style={{ flex: 1, padding: 16, display: "grid", gap: 14 }}>
-        <StepHeader
-          step="3 of 4"
-          title="Optional"
-          hint="You can always edit later"
-        />
-        <Field label="Miti (transaction date)">
+        <Field label="Reason">
           <input
-            style={inputStyle}
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            style={styles.input}
+            placeholder="School fee, emergency, shop credit..."
+            defaultValue="School fee"
           />
         </Field>
-        <Field label="Myad (due date)">
-          <input
-            style={inputStyle}
-            type="date"
-            value={form.dueDate}
-            onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-          />
-        </Field>
-        <div
-          style={{ border: "1px solid #ddd", borderRadius: 18, padding: 15 }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+
+        <div style={styles.twoColumn}>
+          <Field label="Record Date">
+            <input style={styles.input} type="date" defaultValue="2026-05-04" />
+          </Field>
+          <Field label="Due Date">
+            <input style={styles.input} type="date" defaultValue="2026-05-20" />
+          </Field>
+        </div>
+
+        <div style={styles.softCard}>
+          <div style={styles.rowTop}>
             <div>
-              <strong>Byaj</strong>
-              <p style={small}>Simple interest only</p>
+              <h3 style={styles.cardTitle}>Interest</h3>
+              <p style={styles.dueText}>Simple interest only</p>
             </div>
             <button
-              onClick={() =>
-                setForm({ ...form, hasInterest: !form.hasInterest })
-              }
               style={{
-                width: 50,
-                height: 28,
-                borderRadius: 20,
-                border: 0,
-                background: form.hasInterest ? "#111" : "#ddd",
-                padding: 3,
-                cursor: "pointer",
+                ...styles.toggle,
+                background: interestOn ? BRAND : BORDER,
               }}
+              onClick={() => setInterestOn(!interestOn)}
             >
               <span
                 style={{
-                  display: "block",
-                  width: 22,
-                  height: 22,
-                  borderRadius: "50%",
-                  background: "#fff",
-                  transform: form.hasInterest
-                    ? "translateX(22px)"
-                    : "translateX(0)",
+                  ...styles.toggleDot,
+                  transform: interestOn ? "translateX(20px)" : "translateX(0)",
                 }}
               />
             </button>
           </div>
-          {form.hasInterest && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-                marginTop: 12,
-              }}
-            >
+
+          {interestOn && (
+            <div style={{ ...styles.twoColumn, marginTop: 12 }}>
               <Field label="Rate">
-                <input
-                  style={inputStyle}
-                  value={form.rate}
-                  onChange={(e) => setForm({ ...form, rate: e.target.value })}
-                />
+                <input style={styles.input} defaultValue="5" />
               </Field>
               <Field label="Period">
-                <select
-                  style={inputStyle}
-                  value={form.ratePeriod}
-                  onChange={(e) =>
-                    setForm({ ...form, ratePeriod: e.target.value })
-                  }
-                >
+                <select style={styles.input} defaultValue="Monthly">
                   <option>Monthly</option>
                   <option>Yearly</option>
                 </select>
@@ -763,464 +495,645 @@ function AddMoreStep({ go, form, setForm }) {
             </div>
           )}
         </div>
-      </div>
-      <div style={{ padding: 16 }}>
-        <Button onClick={() => go("addReminder")}>Next</Button>
-      </div>
-    </Phone>
-  );
-}
 
-function ReminderStep({ go, form, setForm }) {
-  const options = [
-    "Skip",
-    "1 day before",
-    "1 week before",
-    "1 month before",
-    "On due date",
-    "After overdue",
-  ];
-  return (
-    <Phone>
-      <TopBar title="Notify?" back onBack={() => go("addMore")} />
-      <div style={{ flex: 1, padding: 16 }}>
-        <StepHeader
-          step="4 of 4"
-          title="Yaad dilaune?"
-          hint="Choose when to remind you"
-        />
-        <div style={{ display: "grid", gap: 8, marginTop: 20 }}>
-          {options.map((o) => (
-            <button
-              key={o}
-              onClick={() => setForm({ ...form, reminder: o })}
-              style={{
-                border:
-                  form.reminder === o ? "2px solid #111" : "1px solid #ddd",
-                background: form.reminder === o ? "#fafafa" : "#fff",
-                borderRadius: 16,
-                padding: 14,
-                textAlign: "left",
-                cursor: "pointer",
-              }}
-            >
-              {form.reminder === o ? "●" : "○"} {o}
-            </button>
-          ))}
+        <div style={styles.softCard}>
+          <h3 style={styles.cardTitle}>Notify me?</h3>
+          <div style={styles.notifyGrid}>
+            {[
+              "Skip",
+              "1 day before",
+              "1 week before",
+              "1 month before",
+              "On due date",
+            ].map((item) => (
+              <button
+                key={item}
+                style={
+                  notify === item ? styles.notifyActive : styles.notifyButton
+                }
+                onClick={() => setNotify(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <div style={{ padding: 16 }}>
-        <Button onClick={() => go("success")}>Save Transaction</Button>
+
+      <div style={styles.bottomActionsSingle}>
+        <button style={styles.primaryButton} onClick={onSave}>
+          Save Record
+        </button>
       </div>
-    </Phone>
+    </div>
   );
 }
 
-function SuccessScreen({ go, form }) {
+function SuccessScreen({ onDone, onLedger }) {
   return (
-    <Phone>
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 32,
-          textAlign: "center",
-        }}
+    <div style={styles.screenCenter}>
+      <div style={styles.successIcon}>✓</div>
+      <h1 style={styles.successTitle}>Record saved</h1>
+      <p style={styles.successText}>Ram • NPR 10,000 • Due in 2 days</p>
+      <button
+        style={{ ...styles.primaryButton, width: "100%", marginTop: 28 }}
+        onClick={onLedger}
       >
-        <div style={{ fontSize: 80 }}>✓</div>
-        <h1>LenDen saved!</h1>
-        <p style={{ color: "#666" }}>
-          {form.person || "Ram"} · {money(form.currency, form.amount || 10000)}{" "}
-          · {form.type}
-        </p>
-        <p style={small}>Reminder: {form.reminder}</p>
-        <Button onClick={() => go("ledger")} style={{ marginTop: 30 }}>
-          View Details
-        </Button>
-        <Button
-          variant="light"
-          onClick={() => go("home")}
-          style={{ marginTop: 10 }}
-        >
-          Done
-        </Button>
-      </div>
-    </Phone>
-  );
-}
-
-function Mini({ label, value }) {
-  return (
-    <div style={{ background: "#fafafa", borderRadius: 12, padding: 9 }}>
-      <p style={small}>{label}</p>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-function Row({ label, value }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-      <span style={{ color: "#666" }}>{label}</span>
-      <strong>{value}</strong>
+        View Details
+      </button>
+      <button
+        style={{ ...styles.secondaryButton, width: "100%", marginTop: 10 }}
+        onClick={onDone}
+      >
+        Done
+      </button>
     </div>
   );
 }
 
-function LedgerScreen({ go }) {
+function RemindersScreen({ onBack, onLedger }) {
   return (
-    <Phone>
-      <TopBar
-        title="Ram"
+    <div style={styles.screen}>
+      <Header
+        title="Reminders"
+        subtitle="Sorted by urgency"
         back
-        onBack={() => go("home")}
-        right={
-          <>
-            <button onClick={() => go("editPerson")} style={plainSmall}>
-              ✎
-            </button>
-            <I>⋮</I>
-          </>
-        }
+        onBack={onBack}
       />
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: 16,
-          display: "grid",
-          gap: 14,
-        }}
-      >
-        <Card style={{ padding: 16, textAlign: "center" }}>
-          <p style={small}>Total Due as of 4 May 2026</p>
-          <h1 style={{ margin: "4px 0" }}>NPR 11,000</h1>
-          <p style={small}>Ram owes you</p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 8,
-              marginTop: 14,
-            }}
-          >
-            <Mini label="Principal" value="10,000" />
-            <Mini label="Interest" value="1,000" />
-            <Mini label="Paid" value="3,000" />
-          </div>
-        </Card>
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 18,
-            padding: 15,
-            background: "#fafafa",
-          }}
-        >
-          <strong>How interest affects</strong>
-          <div style={{ display: "grid", gap: 5, marginTop: 10, fontSize: 14 }}>
-            <Row label="Principal" value="NPR 10,000" />
-            <Row label="Rate" value="5% monthly" />
-            <Row label="Duration" value="2 months" />
-            <Row label="Interest" value="NPR 1,000" />
-            <Row label="Remaining" value="NPR 8,000" />
-          </div>
-        </div>
-        <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          >
-            <strong>Transactions</strong>
-            <button style={linkBtn} onClick={() => go("addDetails")}>
-              Add
-            </button>
-          </div>
-          {ledgerRows.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                border: "1px solid #eee",
-                borderRadius: 16,
-                padding: 12,
-                marginBottom: 8,
-                display: "flex",
-                justifyContent: "space-between",
-              }}
+      <div style={styles.content}>
+        {reminderRows.map((row, index) => {
+          const color = row.kind === "owe" ? OWE : RECEIVE;
+          const person =
+            contacts.find((c) => c.name === row.name) || contacts[0];
+          return (
+            <button
+              key={index}
+              style={styles.contactRow}
+              onClick={() => onLedger(person)}
             >
-              <div>
-                <strong>{r.label}</strong>
-                <p style={small}>
-                  {r.date} · {r.note}
-                </p>
+              <div style={styles.avatar}>{row.name[0]}</div>
+              <div style={{ flex: 1 }}>
+                <div style={styles.rowTop}>
+                  <strong>{row.name}</strong>
+                  <strong style={{ color }}>{row.label}</strong>
+                </div>
+                <p style={styles.statusText}>{row.amount}</p>
+                <p style={styles.dueText}>{row.date}</p>
               </div>
-              <strong>{r.amount}</strong>
-            </div>
-          ))}
-        </div>
+            </button>
+          );
+        })}
       </div>
-      <div
-        style={{
-          padding: 16,
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 8,
-        }}
-      >
-        <Button variant="light" onClick={() => go("share")}>
-          Share / Image
-        </Button>
-        <Button onClick={() => go("addDetails")}>Add Transaction</Button>
-      </div>
-    </Phone>
-  );
-}
-
-const plainSmall = {
-  border: 0,
-  background: "none",
-  fontSize: 20,
-  cursor: "pointer",
-};
-
-function EditPerson({ go }) {
-  return (
-    <Phone>
-      <TopBar title="Edit Byakti" back onBack={() => go("ledger")} />
-      <div style={{ flex: 1, padding: 16, display: "grid", gap: 14 }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <div
-            style={{
-              width: 95,
-              height: 95,
-              borderRadius: "50%",
-              background: "#eee",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 38,
-            }}
-          >
-            👤
-          </div>
-        </div>
-        <Field label="Name">
-          <input style={inputStyle} defaultValue="Ram Bahadur" />
-        </Field>
-        <Field label="Nickname">
-          <input style={inputStyle} defaultValue="Ram Dai" />
-        </Field>
-        <Field label="Phone">
-          <input style={inputStyle} defaultValue="98XXXXXXX" />
-        </Field>
-        <Field label="Note">
-          <input style={inputStyle} defaultValue="School friend" />
-        </Field>
-      </div>
-      <div style={{ padding: 16 }}>
-        <Button onClick={() => go("ledger")}>Save</Button>
-      </div>
-    </Phone>
-  );
-}
-
-function RemindersScreen({ go }) {
-  return (
-    <Phone>
-      <TopBar title="Reminders" back onBack={() => go("home")} />
-      <div
-        style={{
-          padding: 16,
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 8,
-        }}
-      >
-        <Button>Upcoming</Button>
-        <Button variant="light">Overdue</Button>
-      </div>
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: 16,
-          display: "grid",
-          gap: 8,
-        }}
-      >
-        {peopleSeed.slice(0, 4).map((p) => (
-          <PersonRow key={p.id} p={p} onClick={() => go("ledger")} />
-        ))}
-      </div>
-      <BottomNav screen="reminders" go={go} />
-    </Phone>
-  );
-}
-
-function ShareScreen({ go }) {
-  return (
-    <Phone>
-      <TopBar title="Share Image" back onBack={() => go("ledger")} />
-      <div style={{ flex: 1, padding: 16 }}>
-        <div
-          style={{
-            width: 260,
-            margin: "0 auto",
-            border: "1px solid #ddd",
-            borderRadius: 28,
-            padding: 22,
-            boxShadow: "0 5px 20px rgba(0,0,0,.08)",
-          }}
-        >
-          <p style={{ textAlign: "center", fontWeight: 800 }}>LenDen Notes</p>
-          <h1>Ram</h1>
-          <p style={small}>He owes you</p>
-          <div style={{ display: "grid", gap: 8, marginTop: 20, fontSize: 14 }}>
-            <Row label="Total Due" value="NPR 11,000" />
-            <Row label="Principal" value="NPR 10,000" />
-            <Row label="Interest" value="NPR 1,000" />
-            <Row label="Paid" value="NPR 3,000" />
-            <Row label="Due Date" value="20 May 2026" />
-          </div>
-          <p style={{ fontSize: 10, color: "#999", marginTop: 35 }}>
-            Generated on: 4 May 2026, 12:30 PM
-          </p>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 8,
-            marginTop: 20,
-          }}
-        >
-          <Button>Share</Button>
-          <Button variant="light">Save Image</Button>
-        </div>
-      </div>
-    </Phone>
-  );
-}
-
-function SettingsScreen({ go }) {
-  const items = [
-    ["💳", "Currency", "NPR"],
-    ["☁", "Backup & Restore", "Local first"],
-    ["🔔", "Notifications", "On"],
-    ["🌐", "Language", "Nepali (Roman)"],
-    ["🔒", "Privacy", "Encrypted local data"],
-  ];
-  return (
-    <Phone>
-      <TopBar title="Settings" back onBack={() => go("home")} />
-      <div style={{ flex: 1, padding: 16, display: "grid", gap: 8 }}>
-        {items.map(([ic, label, value]) => (
-          <div
-            key={label}
-            style={{
-              border: "1px solid #eee",
-              borderRadius: 16,
-              padding: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <span style={{ fontSize: 22 }}>{ic}</span>
-            <div style={{ flex: 1 }}>
-              <strong>{label}</strong>
-              <p style={small}>{value}</p>
-            </div>
-            <span>›</span>
-          </div>
-        ))}
-      </div>
-      <BottomNav screen="settings" go={go} />
-    </Phone>
-  );
-}
-
-function Guide() {
-  return (
-    <aside style={{ width: 320, display: "grid", gap: 14 }} className="guide">
-      <Card style={{ padding: 22 }}>
-        <h1 style={{ margin: 0, fontSize: 32 }}>LenDen Notes</h1>
-        <p style={{ color: "#666" }}>Clickable MVP prototype</p>
-      </Card>
-      <Card style={{ padding: 22 }}>
-        <h3>Locked principles</h3>
-        <ul style={{ color: "#555", lineHeight: 1.9 }}>
-          <li>Simple on surface</li>
-          <li>Local-first</li>
-          <li>Nepali/Roman terms</li>
-          <li>Multi-currency grouped</li>
-          <li>No forced signup</li>
-          <li>Under 15 seconds to record</li>
-        </ul>
-      </Card>
-      <Card style={{ padding: 22 }}>
-        <h3>Test task</h3>
-        <p style={{ color: "#555", lineHeight: 1.6 }}>
-          Ask a user: “Record NPR 10,000 given to Ram, due on 20 May, with 5%
-          monthly interest.” Watch where they hesitate.
-        </p>
-      </Card>
-    </aside>
-  );
-}
-
-export default function App() {
-  const [screen, setScreen] = useState("splash");
-  const [form, setForm] = useState({
-    person: "",
-    amount: "10000",
-    currency: "NPR",
-    type: "Diyeko",
-    reason: "School fee",
-    date: "2026-05-04",
-    dueDate: "2026-05-20",
-    hasInterest: true,
-    rate: "5",
-    ratePeriod: "Monthly",
-    reminder: "1 day before",
-  });
-  const go = setScreen;
-  const screens = {
-    splash: <Splash go={go} />,
-    home: <HomeScreen go={go} />,
-    people: <PeopleScreen go={go} />,
-    addPerson: <AddPersonStep go={go} form={form} setForm={setForm} />,
-    addDetails: <AddDetailsStep go={go} form={form} setForm={setForm} />,
-    addMore: <AddMoreStep go={go} form={form} setForm={setForm} />,
-    addReminder: <ReminderStep go={go} form={form} setForm={setForm} />,
-    success: <SuccessScreen go={go} form={form} />,
-    ledger: <LedgerScreen go={go} />,
-    editPerson: <EditPerson go={go} />,
-    reminders: <RemindersScreen go={go} />,
-    share: <ShareScreen go={go} />,
-    settings: <SettingsScreen go={go} />,
-  };
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f3f3f3",
-        padding: 24,
-        display: "flex",
-        justifyContent: "center",
-        gap: 32,
-        fontFamily: "Inter, Arial, sans-serif",
-        color: "#111",
-      }}
-    >
-      <style>{`@media(max-width:900px){.guide{display:none!important}} input,select{font-family:inherit}`}</style>
-      <Guide />
-      {screens[screen]}
     </div>
   );
 }
+
+function ShareScreen({ person, onBack }) {
+  return (
+    <div style={styles.screen}>
+      <Header title="Share Summary" back onBack={onBack} />
+      <div style={styles.contentCentered}>
+        <div style={styles.shareCard}>
+          <p style={styles.shareBrand}>LenDen Notes</p>
+          <h2 style={styles.shareName}>{person.name}</h2>
+          <p style={styles.statusText}>{person.status}</p>
+          <InfoRow label="Total Due" value="NPR 11,000" />
+          <InfoRow label="Principal" value="NPR 10,000" />
+          <InfoRow label="Interest" value="NPR 1,000" />
+          <InfoRow label="Paid" value="NPR 3,000" />
+          <InfoRow label="Due Date" value="20 May 2026" />
+          <p style={styles.generatedText}>Generated on: 4 May 2026, 12:30 PM</p>
+        </div>
+
+        <button
+          style={{ ...styles.primaryButton, width: "100%", marginTop: 20 }}
+        >
+          Share Image
+        </button>
+        <button
+          style={{ ...styles.secondaryButton, width: "100%", marginTop: 10 }}
+        >
+          Save Image
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsScreen({ onBack }) {
+  const rows = [
+    ["Default Currency", "NPR"],
+    ["Language", "English"],
+    ["Notifications", "On"],
+    ["Backup", "Local first"],
+    ["Privacy", "Data stays on your device"],
+  ];
+
+  return (
+    <div style={styles.screen}>
+      <Header title="Settings" back onBack={onBack} />
+      <div style={styles.content}>
+        {rows.map(([label, value]) => (
+          <div key={label} style={styles.settingsRow}>
+            <div>
+              <strong>{label}</strong>
+              <p style={styles.dueText}>{value}</p>
+            </div>
+            <span style={{ color: MUTED }}>›</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label style={styles.fieldWrap}>
+      <span style={styles.label}>{label}</span>
+      <div style={styles.inputShell}>{children}</div>
+    </label>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div style={styles.infoRow}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#F3F4F6",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    fontFamily:
+      "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
+    color: TEXT,
+  },
+  phone: {
+    width: 390,
+    height: 844,
+    background: "#FFFFFF",
+    borderRadius: 34,
+    overflow: "hidden",
+    position: "relative",
+    boxShadow: "0 24px 70px rgba(17, 24, 39, 0.18)",
+    border: "1px solid #E5E7EB",
+  },
+  statusBar: {
+    height: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 22px",
+    fontSize: 12,
+    color: TEXT,
+    background: "#FFFFFF",
+  },
+  screen: {
+    height: "calc(100% - 32px)",
+    position: "relative",
+    overflow: "hidden",
+    background: "#FFFFFF",
+  },
+  screenCenter: {
+    height: "calc(100% - 32px)",
+    padding: 24,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+  },
+  header: {
+    height: 78,
+    padding: "12px 18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+  },
+  headerTitle: {
+    margin: 0,
+    fontSize: 22,
+    fontWeight: 800,
+    letterSpacing: "-0.02em",
+  },
+  headerSubtitle: {
+    margin: "3px 0 0",
+    fontSize: 13,
+    color: MUTED,
+  },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    border: "none",
+    background: "transparent",
+    fontSize: 24,
+    cursor: "pointer",
+    color: TEXT,
+  },
+  smallIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    border: "none",
+    background: SURFACE,
+    fontSize: 18,
+    cursor: "pointer",
+    color: TEXT,
+  },
+  content: {
+    height: "calc(100% - 78px)",
+    overflowY: "auto",
+    padding: 16,
+    paddingBottom: 105,
+  },
+  contentCentered: {
+    height: "calc(100% - 78px)",
+    overflowY: "auto",
+    padding: 20,
+    paddingBottom: 28,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  searchBox: {
+    height: 46,
+    background: SURFACE,
+    borderRadius: 16,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "0 14px",
+    border: `1px solid ${BORDER}`,
+  },
+  searchInput: {
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    flex: 1,
+    fontSize: 14,
+    color: TEXT,
+  },
+  summaryRow: {
+    marginTop: 14,
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+  },
+  summaryMini: {
+    background: SURFACE,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 18,
+    padding: 14,
+  },
+  miniLabel: {
+    display: "block",
+    color: MUTED,
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  sectionTitleRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 800,
+  },
+  linkButton: {
+    border: "none",
+    background: "transparent",
+    color: BRAND,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  list: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  contactRow: {
+    width: "100%",
+    minHeight: 76,
+    border: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    borderRadius: 18,
+    padding: 13,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    textAlign: "left",
+    cursor: "pointer",
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    background: SURFACE,
+    border: `1px solid ${BORDER}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 800,
+    color: TEXT,
+  },
+  rowTop: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  personName: {
+    fontSize: 16,
+  },
+  amountText: {
+    fontSize: 14,
+    whiteSpace: "nowrap",
+  },
+  statusText: {
+    margin: "4px 0 0",
+    fontSize: 13,
+  },
+  dueText: {
+    margin: "4px 0 0",
+    fontSize: 12,
+    color: MUTED,
+  },
+  fab: {
+    position: "absolute",
+    right: 18,
+    bottom: 22,
+    border: "none",
+    background: BRAND,
+    color: "#FFFFFF",
+    borderRadius: 999,
+    height: 54,
+    padding: "0 18px",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontWeight: 800,
+    boxShadow: "0 12px 30px rgba(15, 118, 110, 0.25)",
+    cursor: "pointer",
+  },
+  ledgerHero: {
+    border: `1px solid ${BORDER}`,
+    borderRadius: 22,
+    padding: 18,
+    background: "#FFFFFF",
+  },
+  ledgerAmount: {
+    margin: "2px 0",
+    fontSize: 34,
+    lineHeight: 1.1,
+    letterSpacing: "-0.04em",
+  },
+  softCard: {
+    marginTop: 14,
+    border: `1px solid ${BORDER}`,
+    background: SURFACE,
+    borderRadius: 20,
+    padding: 15,
+  },
+  cardTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 800,
+  },
+  pill: {
+    color: MUTED,
+    background: "#FFFFFF",
+    border: `1px solid ${BORDER}`,
+    borderRadius: 999,
+    padding: "4px 8px",
+    fontSize: 11,
+  },
+  infoRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "7px 0",
+    fontSize: 14,
+    color: MUTED,
+  },
+  transactionRow: {
+    border: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    borderRadius: 18,
+    padding: 14,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  bottomActions: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 82,
+    borderTop: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    padding: 14,
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+  },
+  bottomActionsSingle: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 82,
+    borderTop: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    padding: 14,
+  },
+  primaryButton: {
+    border: "none",
+    background: BRAND,
+    color: "#FFFFFF",
+    borderRadius: 16,
+    fontWeight: 800,
+    fontSize: 15,
+    cursor: "pointer",
+    height: 52,
+  },
+  secondaryButton: {
+    border: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    color: TEXT,
+    borderRadius: 16,
+    fontWeight: 800,
+    fontSize: 15,
+    cursor: "pointer",
+    height: 52,
+  },
+  fieldWrap: {
+    display: "block",
+  },
+  label: {
+    display: "block",
+    fontSize: 12,
+    fontWeight: 700,
+    color: MUTED,
+    marginBottom: 6,
+  },
+  inputShell: {
+    minHeight: 46,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 16,
+    background: "#FFFFFF",
+    display: "flex",
+    alignItems: "center",
+    padding: "0 13px",
+  },
+  input: {
+    width: "100%",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: TEXT,
+    fontSize: 14,
+    fontFamily: "inherit",
+  },
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns: "1fr 120px",
+    gap: 10,
+  },
+  segmentGroup: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 8,
+  },
+  segment: {
+    height: 46,
+    border: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    borderRadius: 16,
+    color: TEXT,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  segmentActive: {
+    height: 46,
+    border: `1px solid ${BRAND}`,
+    background: BRAND,
+    borderRadius: 16,
+    color: "#FFFFFF",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  toggle: {
+    width: 48,
+    height: 28,
+    border: "none",
+    borderRadius: 999,
+    padding: 4,
+    cursor: "pointer",
+  },
+  toggleDot: {
+    display: "block",
+    width: 20,
+    height: 20,
+    borderRadius: "50%",
+    background: "#FFFFFF",
+    transition: "transform 0.2s ease",
+  },
+  notifyGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  notifyButton: {
+    border: `1px solid ${BORDER}`,
+    background: "#FFFFFF",
+    borderRadius: 999,
+    padding: "8px 10px",
+    fontSize: 12,
+    cursor: "pointer",
+    color: TEXT,
+  },
+  notifyActive: {
+    border: `1px solid ${BRAND}`,
+    background: "#ECFDF5",
+    color: BRAND,
+    borderRadius: 999,
+    padding: "8px 10px",
+    fontSize: 12,
+    cursor: "pointer",
+    fontWeight: 800,
+  },
+  successIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: "50%",
+    background: "#ECFDF5",
+    color: BRAND,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 52,
+    fontWeight: 900,
+  },
+  successTitle: {
+    margin: "24px 0 4px",
+    fontSize: 28,
+    letterSpacing: "-0.03em",
+  },
+  successText: {
+    margin: 0,
+    color: MUTED,
+    fontSize: 14,
+  },
+  shareCard: {
+    width: 260,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 26,
+    padding: 22,
+    background: "#FFFFFF",
+    boxShadow: "0 10px 35px rgba(17, 24, 39, 0.08)",
+  },
+  shareBrand: {
+    textAlign: "center",
+    color: BRAND,
+    fontWeight: 900,
+    margin: 0,
+  },
+  shareName: {
+    margin: "24px 0 0",
+    fontSize: 28,
+  },
+  generatedText: {
+    marginTop: 30,
+    color: MUTED,
+    fontSize: 10,
+  },
+  settingsRow: {
+    minHeight: 64,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 18,
+    padding: 14,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: "#FFFFFF",
+  },
+};
