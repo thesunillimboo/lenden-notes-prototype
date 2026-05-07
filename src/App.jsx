@@ -126,7 +126,23 @@ export default function App() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.phone}>
+      <style>{`
+        * { box-sizing: border-box; }
+        html, body, #root { min-height: 100%; margin: 0; }
+        button, input, select { font: inherit; }
+        button { color: inherit; -webkit-appearance: none; appearance: none; }
+        input, select { color: #111827; }
+        @media (max-width: 480px) {
+          .prototype-phone {
+            width: 100vw !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+      <div className="prototype-phone" style={styles.phone}>
         <StatusBar />
 
         {screen === "home" && (
@@ -755,14 +771,18 @@ const styles = {
   content: {
     height: "calc(100% - 78px)",
     overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehavior: "contain",
     padding: 16,
-    paddingBottom: 105,
+    paddingBottom: 130,
   },
   contentCentered: {
     height: "calc(100% - 78px)",
     overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehavior: "contain",
     padding: 20,
-    paddingBottom: 28,
+    paddingBottom: 40,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -829,6 +849,9 @@ const styles = {
   },
   contactRow: {
     width: "100%",
+    color: TEXT,
+    textDecoration: "none",
+    WebkitTapHighlightColor: "transparent",
     minHeight: 76,
     border: `1px solid ${BORDER}`,
     background: "#FFFFFF",
@@ -932,6 +955,8 @@ const styles = {
     color: MUTED,
   },
   transactionRow: {
+    color: TEXT,
+    textDecoration: "none",
     border: `1px solid ${BORDER}`,
     background: "#FFFFFF",
     borderRadius: 18,
